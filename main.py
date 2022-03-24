@@ -12,7 +12,7 @@ import requests
 #################################################
 
 PostURL = ''  # <---------- INSERT POST URL HERE
-notifyServer = True  # Notifies server if files are decrypted.
+notifyServer = False  # Notifies server if files are decrypted.
 testConnection = False  # Disables encryption/decryption feature, only POST's to server to check the connection.
 
 ##########################################################################
